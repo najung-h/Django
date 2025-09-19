@@ -6,7 +6,10 @@ from django.shortcuts import render
 
 # articles/ 요청이 들어오면 호출되는 함수
 def index(request):
-    return render(request, 'articles/index.html')
+    context = {
+        'name' : 'Jane',
+    }
+    return render(request, 'articles/index.html', context)
 
 
 def dinner(request):
