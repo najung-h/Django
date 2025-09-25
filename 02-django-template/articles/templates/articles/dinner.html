@@ -1,11 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  
-</body>
-</html>
+{% extends "articles/base.html" %}
+{% block content %}
+<h1>저녁 메뉴 추천</h1>
+<p>{{ picked }} 메뉴는 {{ picked | length }}글자 입니다.</p>
+{% comment %} 페이지는 하나인데, 여러 가지의 화면을 보여드릴 수 있게 되죠! {% endcomment %}
+
+<h2>메뉴판</h2>
+<ul>
+  {% for food in foods %}
+    <li>{{ food }}</li>
+  {% endfor %}
+  {% comment %} 원래는 li를 네 개 만들어야 했으나, 이제는 반복을 이용할 수 있음. {% endcomment %}
+</ul>
+
+{% if foods|length == 0  %}
+  <p>메뉴가 모두 소진되었습니다.</p>
+{% else %}
+  <p>아직 메뉴가 남았습니다.</p>
+{% endif %}
+{% endblock content %}

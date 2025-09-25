@@ -1,0 +1,23 @@
+{% comment %}  {% endcomment %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+</head>
+<body>
+  {% comment %} 블락 태그들은 이름이 필요해요. {% endcomment %}
+  {% comment %}  자식 입장에서 블락이 여러 개가 된다면, 그 블락 이름을 구분해야 하기 때문입니다. {% endcomment %}
+  {% comment %}  자식들이 "나 content 블락 재정의할거야."" 이렇게 선언을 하면서 시작할 수 있게끔 {% endcomment %}
+  {% block content %}
+  {% comment %} 영역이 만들어졌습니다. 엔터는 자유에요. {% endcomment %}
+  {% endblock content %}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+
+</body>
+</html>
+
+
