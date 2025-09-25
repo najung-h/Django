@@ -3,4 +3,14 @@
   <div> <p> </p></div>
   <h1>Hello, {{ name }}!!</h1>
   {% comment %} 기능 부여가 가능해지면서, 이 페이지를 재활용할 수 있게 된다.!!! {% endcomment %}
+
+  {% comment %} index.html {% endcomment %}
+  
+  {% comment %} 원래대로 {% endcomment %}
+  <a href="dinner">저녁 메뉴 확인하러 가기!!!</a>
+
+  {% comment %} 이름을 붙이고 나니 {% endcomment %}
+  <a href="{% url "dinner" %}">저녁 메뉴 확인하러 가기!!!</a>
 {% endblock content %}
+
+
