@@ -243,5 +243,3 @@ python manage.py migrate
      ```
 
      
-
-   
