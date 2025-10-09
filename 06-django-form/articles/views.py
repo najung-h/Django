@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from .models import Article
-
+from .forms import ArticleForm
 # Create your views here.
 
 # --- Read ---
@@ -36,29 +36,48 @@ def detail(request, pk):
 # --- Create ---
 
 
-def new(request):
+'''def new(request):
     """새로운 게시글을 작성할 수 있는 new.html 페이지를 렌더링"""
     # 사용자가 데이터를 입력할 수 있는 빈 form 페이지를 보여주는 역할만 함
-    return render(request, 'articles/new.html')
+    form = ArticleForm()
+    context = {
+        'form':form
+    }
+    return render(request, 'articles/new.html', context)
 
 
 def create(request):
     """사용자가 form을 통해 제출한 데이터를 DB에 저장"""
-    # 1. new.html의 form에서 POST 방식으로 전송된 데이터를 추출
-    #    request.POST는 form 데이터가 담긴 딕셔너리 유사 객체
-    title = request.POST.get('title')
-    content = request.POST.get('content')
+    # 1. 사용자 입력 데이터를 통째로 Form 클래스의 인자로 넣어서 인스턴스를 생성
+    form = ArticleForm(request.POST)
+    
+    # 2. 유효성 검사
+    if form.is_valid():
+        # 2.1 유효성 검사를 통과하면 저장
+        # save 매서드가 저장된 객체를 반환
+        article = form.save()
+        return redirect('articles:detail', article.pk) #article.pk 대신에
+    # 2.2 유효성 검사를 통과하지 못하면 해당 페이지를 다시 응답 (+ 에러 메시지를 포함)
+    context = {
+        'form':form
+    }
+    return render(request,'articles/new.html', context) #new페이지를 다시 주는데, 에러 메시지와 함께 다시 줄 거다.
+    
+    # # 1. new.html의 form에서 POST 방식으로 전송된 데이터를 추출
+    # #    request.POST는 form 데이터가 담긴 딕셔너리 유사 객체
+    # title = request.POST.get('title')
+    # content = request.POST.get('content')
 
-    # 2. 추출된 데이터를 바탕으로 Article 모델의 새 인스턴스(객체)를 생성
-    article = Article(title=title, content=content)
-    # 3. .save() 메서드를 호출하여, 인스턴스의 데이터를 DB 테이블에 실제로 저장
-    article.save()
+    # # 2. 추출된 데이터를 바탕으로 Article 모델의 새 인스턴스(객체)를 생성
+    # article = Article(title=title, content=content)
+    # # 3. .save() 메서드를 호출하여, 인스턴스의 데이터를 DB 테이블에 실제로 저장
+    # article.save()
 
-    # 4. 데이터 저장이 완료된 후, 사용자를 방금 생성된 게시글의 상세 페이지로 이동시킴
-    #    redirect는 클라이언트에게 "이 URL로 다시 요청해 줘!"라고 지시하는 응답
-    #    'articles:detail'은 articles 앱의 detail이라는 이름의 URL을 의미
-    return redirect('articles:detail', article.pk)
-
+    # # 4. 데이터 저장이 완료된 후, 사용자를 방금 생성된 게시글의 상세 페이지로 이동시킴
+    # #    redirect는 클라이언트에게 "이 URL로 다시 요청해 줘!"라고 지시하는 응답
+    # #    'articles:detail'은 articles 앱의 detail이라는 이름의 URL을 의미
+    # return redirect('articles:detail', article.pk)
+'''
 
 # --- Delete ---
 
@@ -78,33 +97,89 @@ def delete(request, pk):
 # --- Update ---
 
 
-def edit(request, pk):
+'''def edit(request, pk):
     """기존 게시글을 수정할 수 있는 edit.html 페이지를 렌더링"""
     # 1. 수정할 게시글의 기존 데이터를 pk를 이용해 조회
     article = Article.objects.get(pk=pk)
 
-    # 2. 조회된 데이터를 form에 미리 채워넣기 위해 context에 담아 템플릿에 전달
+    form = ArticleForm(instance=article)
     context = {
-        'article': article,
+        'article':article,
+        'form': form,
     }
-    # 3. edit.html 템플릿을 렌더링
     return render(request, 'articles/edit.html', context)
+    # # 2. 조회된 데이터를 form에 미리 채워넣기 위해 context에 담아 템플릿에 전달
+    # context = {
+    #     'article': article,
+    # }
+    # # 3. edit.html 템플릿을 렌더링
+    # return render(request, 'articles/edit.html', context)
 
 
 def update(request, pk):
     """사용자가 form을 통해 제출한 수정 데이터를 DB에 반영(UPDATE)"""
     # 1. 수정할 게시글을 pk를 이용해 조회
     article = Article.objects.get(pk=pk)
+    
+    # 2. 사용자가 입력한(수정한) 데이터를 통째로 받음 + 기존 데이터
+    form = ArticleForm(request.POST, instance=article) # REQUEST.FORM 생략 가능
+    
+    # 3. 유효성 검사
+    if form.is_valid():
+        #3.1 검사 통과 했을 때
+        form.save()
+        return redirect('articles:detail', article.pk)
+    # 3.2 검사 통과 못 했을 때
+    context = {
+        'article' : article,
+        'form': form,
+    }
+    return render(request, 'articles/edit.html, context')
+    '''
 
-    # 2. edit.html의 form에서 POST 방식으로 전송된 새로운 데이터를 추출
-    title = request.POST.get('title')
-    content = request.POST.get('content')
+    # # 2. edit.html의 form에서 POST 방식으로 전송된 새로운 데이터를 추출
+    # title = request.POST.get('title')
+    # content = request.POST.get('content')
 
-    # 3. 조회된 인스턴스의 필드 값을 새로운 데이터로 덮어씀
-    article.title = title
-    article.content = content
-    # 4. .save() 메서드를 호출하여, 변경된 내용을 DB에 실제로 반영(UPDATE)
-    article.save()
+    # # 3. 조회된 인스턴스의 필드 값을 새로운 데이터로 덮어씀
+    # article.title = title
+    # article.content = content
+    # # 4. .save() 메서드를 호출하여, 변경된 내용을 DB에 실제로 반영(UPDATE)
+    # article.save()
 
-    # 5. 수정이 완료된 후, 해당 게시글의 상세 페이지로 이동
-    return redirect('articles:detail', article.pk)
+    # # 5. 수정이 완료된 후, 해당 게시글의 상세 페이지로 이동
+    # return redirect('articles:detail', article.pk)
+
+def create(request):
+    # 요청 메서드가 POST라면
+    if request.method == "POST":
+        form = ArticleForm(request.POST)
+        # 2. 유효성 검사
+        if form.is_valid():
+            article = form.save()
+            return redirect('articles:detail', article.pk) #article.pk 대신에
+    # 요청 메서드가 POST가 아니라면
+    else:
+        form = ArticleForm()
+    context = {
+        'form':form
+    }
+    return render(request, 'articles/create.html', context)
+
+def update(request, pk):
+    article = Article.objects.get(pk=pk)
+    if request.method =="POST":
+        form = ArticleForm(request.POST, instance=article) 
+        #  유효성 검사
+        if form.is_valid():
+            #3.1 검사 통과 했을 때
+            form.save()
+            return redirect('articles:detail', article.pk)
+    else:
+        form = ArticleForm(instance=article)    
+        
+    context = {
+        'article':article,
+        'form': form,
+    }
+    return render(request, 'articles/update.html', context)

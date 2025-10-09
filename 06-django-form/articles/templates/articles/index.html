@@ -7,7 +7,7 @@
 </head>
 <body>
   <h1>메인 페이지</h1>
-  <a href="{% url "articles:new" %}">NEW</a>
+  <a href="{% url "articles:create" %}">CREATE</a>
   <hr>
   {% comment %} 전체 게시글 출력 {% endcomment %}
   {% for article in articles %}
