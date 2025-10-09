@@ -1,5 +1,9 @@
 #### 📘 ORM with View 정리노트
 
+[TOC]
+
+# Read
+
 ------
 
 #### 1. 핵심 흐름
@@ -203,3 +207,445 @@ def detail(request, pk):
     → `DoesNotExist`
 10. View 함수의 역할은?
      → 클라이언트 요청을 처리하고 적절한 응답을 반환하는 컨트롤러
+
+
+
+---
+
+# Create
+
+#### 1. 핵심 개념
+
+- Django의 **ORM을 View에서 활용해 새로운 데이터를 생성**하는 단계
+- HTML의 `<form>` 태그를 통해 사용자의 입력 데이터를 서버로 전달받고,
+   View에서 ORM 메서드(`.create()` 또는 `.save()`)를 통해 DB에 저장함
+- **HTTP 요청 방식 구분 필수:**
+  - `GET` → 빈 폼 보여주기
+  - `POST` → 사용자가 입력한 데이터를 처리하기
+
+------
+
+#### 2. 데이터 흐름 (CREATE)
+
+1. 사용자가 **“새 글 작성” 버튼 클릭**
+2. `/articles/create/` URL로 요청 (`GET`)
+3. View에서 **빈 폼 템플릿 렌더링** (`create.html`)
+4. 사용자가 제목/내용 입력 후 제출 (`POST`)
+5. View에서 `request.POST` 데이터 받아 ORM으로 DB에 저장
+6. 저장 후 **리다이렉트(redirect)** → 상세페이지(`/articles/<pk>/`) 이동
+
+------
+
+#### 3. URL 설정
+
+##### (1) `articles/urls.py`
+
+```
+from django.urls import path
+from . import views
+
+app_name = "articles"
+
+urlpatterns = [
+    path("", views.index, name="index"),          # 전체조회
+    path("<int:pk>/", views.detail, name="detail"),  # 단일조회
+    path("create/", views.create, name="create"),    # 생성
+]
+```
+
+------
+
+#### 4. View 함수
+
+##### (1) `articles/views.py`
+
+```
+from django.shortcuts import render, redirect
+from .models import Article
+
+def create(request):
+    # (1) GET 요청 → 폼 페이지 보여주기
+    if request.method == "GET":
+        return render(request, "articles/create.html")
+
+    # (2) POST 요청 → 입력받은 데이터 저장
+    elif request.method == "POST":
+        title = request.POST.get("title")
+        content = request.POST.get("content")
+
+        # ORM으로 DB 저장
+        article = Article.objects.create(title=title, content=content)
+
+        # 저장 후 상세페이지로 리다이렉트
+        return redirect("articles:detail", article.pk)
+```
+
+------
+
+#### 5. Template 작성
+
+##### (1) `articles/templates/articles/create.html`
+
+```
+<h1>새 글 작성</h1>
+<hr>
+
+<form action="{% url 'articles:create' %}" method="POST">
+  {% csrf_token %}
+  <label for="title">제목:</label>
+  <input type="text" name="title" id="title"><br><br>
+
+  <label for="content">내용:</label>
+  <textarea name="content" id="content" rows="5"></textarea><br><br>
+
+  <input type="submit" value="작성">
+</form>
+
+<hr>
+<a href="{% url 'articles:index' %}">메인으로</a>
+```
+
+✅ **핵심 포인트**
+
+- `method="POST"` → 서버에 데이터를 전달할 때 필수
+- `{% csrf_token %}` → Django의 보안 토큰 (CSRF 공격 방지)
+- `request.POST.get("필드명")` → form 입력 데이터 추출
+- `Article.objects.create()` → DB에 새로운 레코드 저장
+- `redirect("articles:detail", article.pk)` → 생성 후 상세페이지로 이동
+
+------
+
+#### 6. 전체 흐름 시각화
+
+```
+[사용자 입력] → [create.html 폼 제출]
+       ↓
+   (POST 요청)
+       ↓
+  [views.create()]
+       ↓
+Article.objects.create(title, content)
+       ↓
+  redirect → detail(pk)
+       ↓
+[detail.html] 페이지 표시
+```
+
+------
+
+#### 7. ORM 관련 메서드 정리
+
+| 메서드      | 설명                           | 예시                                                   |
+| ----------- | ------------------------------ | ------------------------------------------------------ |
+| `.create()` | 인스턴스 생성 + 저장 (한 번에) | `Article.objects.create(title="제목", content="내용")` |
+| `.save()`   | 인스턴스 생성 후 나중에 저장   | `a = Article(title="제목"); a.save()`                  |
+| `.get()`    | 단일 객체 조회                 | `Article.objects.get(pk=1)`                            |
+| `.all()`    | 전체 객체 조회                 | `Article.objects.all()`                                |
+
+------
+
+#### 8. redirect() 함수
+
+- **정의:** 요청이 끝난 후 특정 URL로 이동시키는 함수
+
+- **형식:** `return redirect("앱이름:url이름", 인자)`
+
+- **예시:**
+
+  ```
+  return redirect("articles:detail", article.pk)
+  ```
+
+- 내부적으로 `HttpResponseRedirect` 객체를 반환
+
+------
+
+#### 9. form과 POST의 관계 정리
+
+| 구분       | 설명                                              |
+| ---------- | ------------------------------------------------- |
+| GET        | 서버로부터 페이지를 **조회** (데이터 변경 없음)   |
+| POST       | 서버로 **데이터를 전송** (DB에 변화 발생)         |
+| form 태그  | `action`(보낼 URL) + `method`(요청 방식)으로 구성 |
+| csrf_token | Django에서 POST 요청 시 보안을 위한 필수 태그     |
+
+------
+
+#### 10. 전체 CRUD 구성도 (현재까지)
+
+| 기능     | URL                 | View 함수  | ORM           | Template      |
+| -------- | ------------------- | ---------- | ------------- | ------------- |
+| 전체조회 | `/articles/`        | `index()`  | `.all()`      | `index.html`  |
+| 단일조회 | `/articles/<pk>/`   | `detail()` | `.get(pk=pk)` | `detail.html` |
+| 생성     | `/articles/create/` | `create()` | `.create()`   | `create.html` |
+
+------
+
+#### 11. 테스트 명령어
+
+```
+python manage.py runserver
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+✅ **주의:** DB를 초기화한 경우 `python manage.py migrate`를 반드시 실행해야 함.
+
+------
+
+#### 12. 학습 팁
+
+- CRUD의 **데이터 흐름을 몸에 익히는 것이 핵심**이다.
+- GET/POST 구분을 완벽히 이해하면 이후 Form Class, ModelForm 학습이 훨씬 쉬워진다.
+- `create → redirect → detail` 흐름을 최소 3회 이상 직접 타이핑 연습할 것.
+
+------
+
+#### 13. 단답식 퀴즈
+
+1. `create()` 함수에서 GET 요청과 POST 요청의 차이는?
+    → **GET은 폼 표시, POST는 데이터 저장**
+2. 사용자가 입력한 폼 데이터를 가져오는 코드?
+    → `request.POST.get("필드명")`
+3. ORM으로 새로운 데이터를 생성하는 메서드는?
+    → `Article.objects.create()`
+4. 데이터 저장 후 다른 페이지로 이동시키는 함수는?
+    → `redirect()`
+5. CSRF 공격 방지를 위한 Django 템플릿 태그는?
+    → `{% csrf_token %}`
+6. `redirect("articles:detail", article.pk)`의 의미는?
+    → 새로 생성된 글의 상세페이지로 이동
+7. View에서 HTML을 렌더링할 때 사용하는 함수는?
+    → `render(request, "template.html", context)`
+8. form 태그의 필수 속성 두 가지는?
+    → `action`, `method`
+9. `request.method == "POST"` 구문은 왜 필요한가?
+    → 요청이 데이터 생성 요청인지 구분하기 위해
+10. `Article.objects.create()`와 `.save()`의 차이점은?
+     → `.create()`는 생성+저장을 한 번에, `.save()`는 두 단계를 분리
+
+
+
+---
+
+# Delete
+
+#### 1. 핵심 개념
+
+- 특정 게시글을 **DB에서 삭제**하는 기능
+- 삭제는 **POST 요청**으로만 처리해야 함 (URL 클릭만으로 삭제되면 위험하니까)
+- 삭제 후에는 **메인 페이지(index)** 로 리다이렉트
+
+------
+
+#### 2. URL 설정
+
+```
+# articles/urls.py
+from django.urls import path
+from . import views
+
+app_name = "articles"
+
+urlpatterns = [
+    path("", views.index, name="index"),
+    path("<int:pk>/", views.detail, name="detail"),
+    path("create/", views.create, name="create"),
+    path("<int:pk>/delete/", views.delete, name="delete"),  # 삭제
+]
+```
+
+------
+
+#### 3. View 함수
+
+```
+# articles/views.py
+from django.shortcuts import redirect, get_object_or_404
+from .models import Article
+
+def delete(request, pk):
+    article = get_object_or_404(Article, pk=pk)
+    article.delete()
+    return redirect("articles:index")
+```
+
+✅ **핵심 요약**
+
+- `get_object_or_404()` : 존재하지 않는 객체일 때 404 에러 자동 처리
+- `.delete()` : DB에서 해당 객체 삭제
+- `redirect("articles:index")` : 삭제 후 목록으로 이동
+
+------
+
+#### 4. Template 버튼 추가
+
+`detail.html`에 삭제 버튼 추가:
+
+```
+<form action="{% url 'articles:delete' article.pk %}" method="POST">
+  {% csrf_token %}
+  <input type="submit" value="삭제">
+</form>
+```
+
+✅ **보안 포인트**
+
+- 삭제는 반드시 `POST` + `{% csrf_token %}` 조합으로
+   (`GET` 요청만으로 삭제되면 악성 링크에 노출될 수 있음)
+
+------
+
+#### 5. 전체 흐름 요약
+
+```
+[사용자 클릭: 삭제버튼]
+      ↓
+ (POST /articles/1/delete/)
+      ↓
+ views.delete() 실행
+      ↓
+ article.delete() → DB 삭제
+      ↓
+ redirect("articles:index")
+```
+
+------
+
+#### 6. 단답식 퀴즈
+
+1. ORM에서 객체를 삭제하는 메서드는? → `.delete()`
+2. 삭제 후 보통 어디로 이동하나? → 메인페이지(`index`)
+3. 삭제 요청은 왜 GET이 아닌 POST로 해야 하나? → 보안상 안전하게 처리하기 위해
+4. 존재하지 않는 객체를 처리할 때 사용하는 함수는? → `get_object_or_404()`
+
+------
+
+> ✅ 요약 한 줄
+>  **삭제(Delete)**는 “특정 객체를 POST 요청으로 안전하게 제거하고 목록 페이지로 리다이렉트” 하는 간단한 단계다.
+
+
+
+---
+
+# Update
+
+#### 1. 핵심 개념
+
+- 기존 게시글 데이터를 **조회 + 수정 후 저장**
+- `GET` 요청 → 기존 데이터가 채워진 **수정 폼** 보여주기
+- `POST` 요청 → 입력된 새 데이터로 DB 업데이트
+- 수정 후 → 해당 게시글의 상세페이지(`detail`)로 리다이렉트
+
+------
+
+#### 2. URL 설정
+
+```
+# articles/urls.py
+from django.urls import path
+from . import views
+
+app_name = "articles"
+
+urlpatterns = [
+    path("", views.index, name="index"),
+    path("<int:pk>/", views.detail, name="detail"),
+    path("create/", views.create, name="create"),
+    path("<int:pk>/update/", views.update, name="update"),  # 수정
+    path("<int:pk>/delete/", views.delete, name="delete"),
+]
+```
+
+------
+
+#### 3. View 함수
+
+```
+# articles/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Article
+
+def update(request, pk):
+    article = get_object_or_404(Article, pk=pk)
+
+    # (1) GET 요청 → 수정 폼 보여주기
+    if request.method == "GET":
+        context = {"article": article}
+        return render(request, "articles/update.html", context)
+
+    # (2) POST 요청 → 수정 후 저장
+    elif request.method == "POST":
+        article.title = request.POST.get("title")
+        article.content = request.POST.get("content")
+        article.save()
+        return redirect("articles:detail", article.pk)
+```
+
+✅ **핵심 요약**
+
+- `article = get_object_or_404(Article, pk=pk)` → 수정할 대상 불러오기
+- `article.save()` → DB에 변경사항 반영
+- **create()와 다른 점:** 기존 객체를 수정한다는 것뿐
+
+------
+
+#### 4. Template 작성
+
+##### `articles/templates/articles/update.html`
+
+```
+<h1>게시글 수정</h1>
+<hr>
+
+<form action="{% url 'articles:update' article.pk %}" method="POST">
+  {% csrf_token %}
+  <label for="title">제목:</label>
+  <input type="text" name="title" id="title" value="{{ article.title }}"><br><br>
+
+  <label for="content">내용:</label>
+  <textarea name="content" id="content" rows="5">{{ article.content }}</textarea><br><br>
+
+  <input type="submit" value="수정 완료">
+</form>
+
+<hr>
+<a href="{% url 'articles:detail' article.pk %}">돌아가기</a>
+```
+
+------
+
+#### 5. detail.html에 수정 버튼 추가
+
+```
+<a href="{% url 'articles:update' article.pk %}">수정</a>
+```
+
+------
+
+#### 6. 전체 흐름 요약
+
+```
+[사용자 클릭: 수정 버튼]
+      ↓ (GET)
+update() → 기존 데이터가 채워진 폼 렌더링
+      ↓ (POST)
+폼 제출 → 수정된 데이터 저장
+      ↓
+redirect("articles:detail", article.pk)
+```
+
+------
+
+#### 7. 단답식 퀴즈
+
+1. 기존 객체를 불러올 때 사용하는 함수는? → `get_object_or_404()`
+2. 수정 요청을 구분하기 위한 조건문은? → `if request.method == "POST"`
+3. 데이터를 실제로 DB에 반영하는 메서드는? → `.save()`
+4. 수정 완료 후 리다이렉트하는 URL은? → `detail` 페이지
+5. `create()`와 `update()`의 공통점은? → 모두 `POST`로 데이터를 받아 DB에 저장
+
+------
+
+> ✅ 요약 한 줄
+>  **Update는 “기존 객체를 불러와 수정하고 저장한 뒤 detail로 리다이렉트” 하는 과정이며, create의 구조를 거의 그대로 따른다.**
