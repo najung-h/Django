@@ -29,23 +29,24 @@
 ##### (1) 프로젝트 URL 설정 (`project/urls.py`)
 
 ```python
-from django.urls import path, include
+from django.urls import path, include # include 추가
 
 urlpatterns = [
-    path("articles/", include("articles.urls")),
+		path('admin/', admin.site.urls),
+    path("articles/", include("articles.urls")), # 추가
 ]
 ```
 
 ##### (2) 앱 URL 설정 (`articles/urls.py`)
 
 ```python
-from django.urls import path
-from . import views
+from django.urls import path 
+from . import views # 명시적 상대경로
 
-app_name = "articles"
+app_name = 'articles' # app 이름 지정
 
 urlpatterns = [
-    path("", views.index, name="index"),
+    path("", views.index, name="index"),
 ]
 ```
 
@@ -53,24 +54,40 @@ urlpatterns = [
 
 ```python
 from django.shortcuts import render
-from .models import Article
+from .models import Article 
 
+# 전체 게시글 조회(1) 후 메인 페이지 응답(2)
 def index(request):
+    # 1. DB에 전체 게시글을 조회
     articles = Article.objects.all()
-    context = {"articles": articles}
-    return render(request, "articles/index.html", context)
+
+    # 2. 전체 게시글 목록을 템플릿과 함께 응답
+    context = {
+        'articles': articles,
+    }
+    return render(request, 'articles/index.html', context)
 ```
 
 ##### (4) Template (`articles/templates/articles/index.html`)
 
 ```html
-<h1>Main Page</h1>
-
-{% for article in articles %}
-  <p>{{ article.pk }}. {{ article.title }}</p>
-  <p>{{ article.content }}</p>
+ <body>
+  <h1>메인 페이지</h1>
   <hr>
-{% endfor %}
+  {% comment %} 전체 게시글 출력 {% endcomment %}
+  {% for article in articles %}
+    <p>글 번호: {{ article.pk }}</p>
+    <p>글 제목: <a href="{% url "articles:detail" article.pk %}">{{ article.title }}</a></p>
+    <p>글 내용: {{ article.content }}</p>
+    <hr>
+  {% endfor %}
+  
+  # 추가
+  <form action="{% url "articles:new" %}">
+    <label for="new" value="작성하기">새로운 글 작성하기</label>
+    <input type="submit" >
+  </form>
+</body>
 ```
 
 ✅ **핵심 요약**
@@ -87,21 +104,25 @@ def index(request):
 
 ```python
 urlpatterns = [
-    path("", views.index, name="index"),
-    path("<int:pk>/", views.detail, name="detail"),
+    path("", views.index, name="index"),
+    path("<int:pk>/", views.detail, name="detail"), # 추가
 ]
 ```
 
 ##### (2) View 함수 (`articles/views.py`)
 
 ```python
-from django.shortcuts import render
-from .models import Article
-
 def detail(request, pk):
+    """특정 pk(Primary Key)를 가진 게시글 하나를 조회하여 detail.html 페이지를 렌더링"""
+    # 1. URL로부터 전달받은 pk 값을 사용하여, 해당 pk를 가진 Article 객체 하나를 조회
     article = Article.objects.get(pk=pk)
-    context = {"article": article}
-    return render(request, "articles/detail.html", context)
+
+    # 2. 조회된 단일 게시글 객체를 context에 담아 템플릿에 전달
+    context = {
+        'article': article,
+    }
+    # 3. detail.html 템플릿을 렌더링
+    return render(request, 'articles/detail.html', context)
 ```
 
 ##### (3) Template (`articles/templates/articles/detail.html`)
@@ -152,15 +173,15 @@ def detail(request, pk):
 
 ------
 
-#### 7. 실행 명령어 요약
+#### *7. 실행 명령어 요약*
 
-| 명령어                             | 설명               |
-| ---------------------------------- | ------------------ |
-| `python manage.py runserver`       | 개발 서버 실행     |
-| `python manage.py shell`           | Django Shell 진입  |
-| `python manage.py makemigrations`  | 모델 변경사항 감지 |
-| `python manage.py migrate`         | DB에 모델 반영     |
-| `python manage.py createsuperuser` | 관리자 계정 생성   |
+| 명령어                               | 설명                 |
+| ------------------------------------ | -------------------- |
+| *`python manage.py runserver`*       | *개발 서버 실행*     |
+| *`python manage.py shell`*           | *Django Shell 진입*  |
+| *`python manage.py makemigrations`*  | *모델 변경사항 감지* |
+| *`python manage.py migrate`*         | *DB에 모델 반영*     |
+| *`python manage.py createsuperuser`* | *관리자 계정 생성*   |
 
 ------
 
@@ -240,16 +261,17 @@ def detail(request, pk):
 
 ##### (1) `articles/urls.py`
 
-```
+```python
 from django.urls import path
 from . import views
 
 app_name = "articles"
 
 urlpatterns = [
-    path("", views.index, name="index"),          # 전체조회
-    path("<int:pk>/", views.detail, name="detail"),  # 단일조회
-    path("create/", views.create, name="create"),    # 생성
+    path("", views.index, name="index"),          
+    path("<int:pk>/", views.detail, name="detail"), 
+    path('new/', views.new, name='new'), # 추가 1
+    path("create/", views.create, name="create"),    # 추가 2
 ]
 ```
 
@@ -259,50 +281,60 @@ urlpatterns = [
 
 ##### (1) `articles/views.py`
 
-```
-from django.shortcuts import render, redirect
+```python
+from django.shortcuts import render, redirect # 추가
 from .models import Article
 
+def new(request):
+    """새로운 게시글을 작성할 수 있는 new.html 페이지를 렌더링"""
+    # 사용자가 데이터를 입력할 수 있는 빈 form 페이지를 보여주는 역할만 함
+    return render(request, 'articles/new.html')
+
+
 def create(request):
-    # (1) GET 요청 → 폼 페이지 보여주기
-    if request.method == "GET":
-        return render(request, "articles/create.html")
+    """사용자가 form을 통해 제출한 데이터를 DB에 저장"""
+    # 1. new.html의 form에서 POST 방식으로 전송된 데이터를 추출
+    #    request.POST는 form 데이터가 담긴 딕셔너리 유사 객체
+    title = request.POST.get('title')
+    content = request.POST.get('content')
 
-    # (2) POST 요청 → 입력받은 데이터 저장
-    elif request.method == "POST":
-        title = request.POST.get("title")
-        content = request.POST.get("content")
+    # 2. 추출된 데이터를 바탕으로 Article 모델의 새 인스턴스(객체)를 생성
+    article = Article(title=title, content=content)
+    # 3. .save() 메서드를 호출하여, 인스턴스의 데이터를 DB 테이블에 실제로 저장
+    article.save()
 
-        # ORM으로 DB 저장
-        article = Article.objects.create(title=title, content=content)
-
-        # 저장 후 상세페이지로 리다이렉트
-        return redirect("articles:detail", article.pk)
+    # 4. 데이터 저장이 완료된 후, 사용자를 방금 생성된 게시글의 상세 페이지로 이동시킴
+    #    redirect는 클라이언트에게 "이 URL로 다시 요청해 줘!"라고 지시하는 응답
+    #    'articles:detail'은 articles 앱의 detail이라는 이름의 URL을 의미
+    return redirect('articles:detail', article.pk)
 ```
 
 ------
 
 #### 5. Template 작성
 
+##### (1) `articles/templates/articles/new.html`
+
+```html
+  <h1>New</h1>
+  <form action="{% url "articles:create" %}" method="POST">
+    {% csrf_token %}
+    <div>
+      <label for="title">Title: </label>
+      <input type="text" name="title" id="title">
+    </div>
+    <div>
+      <label for="content">Content: </label>
+      <textarea name="content" id="content"></textarea> # textarea
+    </div>
+    <input type="submit">
+  </form>
+```
+
 ##### (1) `articles/templates/articles/create.html`
 
-```
-<h1>새 글 작성</h1>
-<hr>
-
-<form action="{% url 'articles:create' %}" method="POST">
-  {% csrf_token %}
-  <label for="title">제목:</label>
-  <input type="text" name="title" id="title"><br><br>
-
-  <label for="content">내용:</label>
-  <textarea name="content" id="content" rows="5"></textarea><br><br>
-
-  <input type="submit" value="작성">
-</form>
-
-<hr>
-<a href="{% url 'articles:index' %}">메인으로</a>
+```html
+  <h1>게시글이 생성 되었습니다.</h1>
 ```
 
 ✅ **핵심 포인트**
@@ -317,18 +349,18 @@ def create(request):
 
 #### 6. 전체 흐름 시각화
 
-```
-[사용자 입력] → [create.html 폼 제출]
-       ↓
-   (POST 요청)
-       ↓
-  [views.create()]
-       ↓
-Article.objects.create(title, content)
-       ↓
-  redirect → detail(pk)
-       ↓
-[detail.html] 페이지 표시
+```mermaid
+sequenceDiagram
+    participant C as Client (Chrome)
+    participant D as Django
+
+    C->>D: (1) [POST] 게시글 작성 요청 (+입력 데이터)
+    D->>D: (2) create view 함수 호출
+    D-->>C: (3) redirect 응답 (detail 주소로 요청을 보내라)
+    C->>D: (4) [GET] detail 페이지 요청
+    D->>D: (5) detail view 함수 호출
+    D-->>C: (6) detail 페이지 응답
+
 ```
 
 ------
@@ -352,7 +384,7 @@ Article.objects.create(title, content)
 
 - **예시:**
 
-  ```
+  ```python
   return redirect("articles:detail", article.pk)
   ```
 
@@ -381,9 +413,9 @@ Article.objects.create(title, content)
 
 ------
 
-#### 11. 테스트 명령어
+#### *11. 테스트 명령어*
 
-```
+```bash
 python manage.py runserver
 python manage.py migrate
 python manage.py createsuperuser
@@ -440,7 +472,7 @@ python manage.py createsuperuser
 
 #### 2. URL 설정
 
-```
+```python
 # articles/urls.py
 from django.urls import path
 from . import views
@@ -459,15 +491,18 @@ urlpatterns = [
 
 #### 3. View 함수
 
-```
+```python
 # articles/views.py
-from django.shortcuts import redirect, get_object_or_404
-from .models import Article
-
 def delete(request, pk):
-    article = get_object_or_404(Article, pk=pk)
+    """특정 pk를 가진 게시글을 DB에서 삭제"""
+    # 1. 삭제할 게시글을 pk를 이용해 조회
+    article = Article.objects.get(pk=pk)
+
+    # 2. 조회된 객체의 .delete() 메서드를 호출하여, DB에서 해당 레코드를 삭제(DELETE)
     article.delete()
-    return redirect("articles:index")
+
+    # 3. 게시글 삭제 후, 전체 목록 페이지로 이동
+    return redirect('articles:index')
 ```
 
 ✅ **핵심 요약**
@@ -482,7 +517,7 @@ def delete(request, pk):
 
 `detail.html`에 삭제 버튼 추가:
 
-```
+```python
 <form action="{% url 'articles:delete' article.pk %}" method="POST">
   {% csrf_token %}
   <input type="submit" value="삭제">
@@ -541,19 +576,12 @@ def delete(request, pk):
 
 #### 2. URL 설정
 
-```
+```python
 # articles/urls.py
-from django.urls import path
-from . import views
-
-app_name = "articles"
 
 urlpatterns = [
-    path("", views.index, name="index"),
-    path("<int:pk>/", views.detail, name="detail"),
-    path("create/", views.create, name="create"),
-    path("<int:pk>/update/", views.update, name="update"),  # 수정
-    path("<int:pk>/delete/", views.delete, name="delete"),
+    path("<int:pk>/update/", views.update, name="update"),
+    path('<int:pk>/edit/', views.edit, name='edit'),
 ]
 ```
 
@@ -561,25 +589,39 @@ urlpatterns = [
 
 #### 3. View 함수
 
-```
+```python
 # articles/views.py
-from django.shortcuts import render, redirect, get_object_or_404
-from .models import Article
+
+def edit(request, pk):
+    """기존 게시글을 수정할 수 있는 edit.html 페이지를 렌더링"""
+    # 1. 수정할 게시글의 기존 데이터를 pk를 이용해 조회
+    article = Article.objects.get(pk=pk)
+
+    # 2. 조회된 데이터를 form에 미리 채워넣기 위해 context에 담아 템플릿에 전달
+    context = {
+        'article': article,
+    }
+    # 3. edit.html 템플릿을 렌더링
+    return render(request, 'articles/edit.html', context)
+
 
 def update(request, pk):
-    article = get_object_or_404(Article, pk=pk)
+    """사용자가 form을 통해 제출한 수정 데이터를 DB에 반영(UPDATE)"""
+    # 1. 수정할 게시글을 pk를 이용해 조회
+    article = Article.objects.get(pk=pk)
 
-    # (1) GET 요청 → 수정 폼 보여주기
-    if request.method == "GET":
-        context = {"article": article}
-        return render(request, "articles/update.html", context)
+    # 2. edit.html의 form에서 POST 방식으로 전송된 새로운 데이터를 추출
+    title = request.POST.get('title')
+    content = request.POST.get('content')
 
-    # (2) POST 요청 → 수정 후 저장
-    elif request.method == "POST":
-        article.title = request.POST.get("title")
-        article.content = request.POST.get("content")
-        article.save()
-        return redirect("articles:detail", article.pk)
+    # 3. 조회된 인스턴스의 필드 값을 새로운 데이터로 덮어씀
+    article.title = title
+    article.content = content
+    # 4. .save() 메서드를 호출하여, 변경된 내용을 DB에 실제로 반영(UPDATE)
+    article.save()
+
+    # 5. 수정이 완료된 후, 해당 게시글의 상세 페이지로 이동
+    return redirect('articles:detail', article.pk)
 ```
 
 ✅ **핵심 요약**
@@ -592,33 +634,34 @@ def update(request, pk):
 
 #### 4. Template 작성
 
-##### `articles/templates/articles/update.html`
+##### `articles/templates/articles/edit.html`
 
-```
-<h1>게시글 수정</h1>
-<hr>
-
-<form action="{% url 'articles:update' article.pk %}" method="POST">
-  {% csrf_token %}
-  <label for="title">제목:</label>
-  <input type="text" name="title" id="title" value="{{ article.title }}"><br><br>
-
-  <label for="content">내용:</label>
-  <textarea name="content" id="content" rows="5">{{ article.content }}</textarea><br><br>
-
-  <input type="submit" value="수정 완료">
-</form>
-
-<hr>
-<a href="{% url 'articles:detail' article.pk %}">돌아가기</a>
+```html
+<body>
+  <h1>Edit</h1>
+  <form action="{% url "articles:update" article.pk %}" method="POST">
+    {% csrf_token %}
+    <div>
+      <label for="title">Title: </label>
+      <input type="text" name="title" id="title" value="{{ article.title }}">
+    </div>
+    <div>
+      <label for="content">Content: </label>
+      <textarea name="content" id="content">{{ article.content }}</textarea>
+    </div>
+    <input type="submit">
+  </form>
+  <hr>
+  <a href="{% url "articles:detail" article.pk %}">[메인 페이지로]</a>
+</body>
 ```
 
 ------
 
 #### 5. detail.html에 수정 버튼 추가
 
-```
-<a href="{% url 'articles:update' article.pk %}">수정</a>
+```html
+<a href="{% url "articles:edit" article.pk %}">수정하기</a>
 ```
 
 ------
