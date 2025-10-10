@@ -44,7 +44,7 @@ def create(request):
     # 사용자가 form을 작성하고 '제출' 버튼을 눌렀을 때
     if request.method == 'POST':
         # form 인스턴스를 생성하고, 요청으로 들어온 데이터(request.POST)를 채움
-        form = ArticleForm(request.POST)
+        form = ArticleForm(request.POST, request.FILES)  # post(텍스트)와 files(이미지) 
         # 유효성 검사를 통과했다면
         if form.is_valid():
             # form 데이터를 DB에 저장하고, 저장된 Article 객체를 반환받음
@@ -138,7 +138,7 @@ def update(request, pk):
         # form 인스턴스를 생성하되,
         # 1. request.POST: 사용자가 제출한 새로운 데이터로 채우고,
         # 2. instance=article: 이 데이터가 어떤 기존 객체를 수정할 것인지 지정
-        form = ArticleForm(request.POST, instance=article)
+        form = ArticleForm(request.POST, request.FILES, instance=article)
         if form.is_valid():
             # 유효성 검사를 통과하면 DB에 변경사항을 저장
             form.save()

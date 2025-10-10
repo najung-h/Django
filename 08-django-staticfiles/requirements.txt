@@ -9,6 +9,7 @@ ipython_pygments_lexers==1.1.1
 jedi==0.19.2
 matplotlib-inline==0.1.7
 parso==0.8.5
+pillow==11.3.0
 prompt_toolkit==3.0.52
 pure_eval==0.2.3
 Pygments==2.19.2
